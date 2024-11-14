@@ -44,7 +44,7 @@ def add_person(image_path, name, known_encodings, known_names):
 
 # Example usage
 known_encodings = [
-    face_recognition.face_encodings(face_recognition.load_image_file("pessoa2.jpeg"))[0],
+    face_recognition.face_encodings(face_recognition.load_image_file("pessoa2.jpg"))[0],
     face_recognition.face_encodings(face_recognition.load_image_file("pessoa1.jpeg"))[0]
 ]
 known_names = ["Mateus", "Isaias"]
