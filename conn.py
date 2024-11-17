@@ -1,6 +1,6 @@
 import psycopg2.extras
 
-dbConn = psycopg2.connect(
+db = psycopg2.connect(
     " dbname=pass"
     " host=localhost"
     " port=5434"

@@ -1,5 +1,5 @@
-flask~=3.0.3
-face_recognition
+flask
+face-recognition
 opencv-python-headless
 numpy~=1.26.4
 psycopg2~=2.9.9
