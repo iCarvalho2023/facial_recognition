@@ -1,6 +1,7 @@
 flask
 face-recognition
 opencv-python-headless
+python-dotenv
 numpy~=1.26.4
 psycopg2~=2.9.9
 opencv-python~=4.10.0.84
