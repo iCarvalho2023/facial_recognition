@@ -9,3 +9,6 @@
 /modules.xml
 /inspectionProfiles/Project_Default.xml
 /vcs.xml
+../.venv/*
+../package/*
+../function.zip
