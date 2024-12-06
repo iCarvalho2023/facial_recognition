@@ -19,32 +19,32 @@ def show():
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     face_locations = face_recognition.face_locations(image_rgb)
-    face_encodings = face_recognition.face_encodings(image_rgb, face_locations)
 
-    persons = []
+    if len(face_locations) > 1:
+        return jsonify({"error": "More than one face detected"}), 400
+
+    if len(face_locations) == 0:
+        return jsonify({"error": "No faces detected"}), 400
+
+    face_encoding = face_recognition.face_encodings(image_rgb, face_locations)[0]
+
+    if face_encoding.shape[0] != 128:
+        return jsonify({"error": "Face encoding dimensions incorrect"}), 400
+
     known_encodings, known_names, known_person_ids = load_face()
 
-    for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-        if face_encoding.shape[0] != 128:
-            print(f"Skipping face: Incorrect dimensions {face_encoding.shape}")
-            continue
+    matches = face_recognition.compare_faces(known_encodings, face_encoding)
+    name = "Visitante"
+    person_id = None
 
-        matches = face_recognition.compare_faces(known_encodings, face_encoding)
-        name = "Visitante"
-        person_id = None
+    if True in matches:
+        match_index = matches.index(True)
+        name = known_names[match_index]
+        person_id = known_person_ids[match_index]
 
-        if True in matches:
-            match_index = matches.index(True)
-            name = known_names[match_index]
-            person_id = known_person_ids[match_index]
-
-        cv2.rectangle(image_rgb, (left, top), (right, bottom), (0, 255, 0), 2)
-        cv2.putText(image_rgb, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-        persons.append({
-            "name": name,
-            "person_id": person_id
-        })
+    (top, right, bottom, left) = face_locations[0]
+    cv2.rectangle(image_rgb, (left, top), (right, bottom), (0, 255, 0), 2)
+    cv2.putText(image_rgb, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
     _, buffer = cv2.imencode('.jpg', image_bgr)
@@ -52,9 +52,11 @@ def show():
 
     return jsonify({
         "image": img_str,
-        "persons": persons
+        "person": {
+            "name": name,
+            "person_id": person_id
+        }
     })
-
 
 def store():
     person_data = request.form.get("person_data")
