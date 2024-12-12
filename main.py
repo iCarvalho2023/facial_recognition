@@ -1,8 +1,26 @@
-from flask import Flask, Blueprint
-from controller.face_controller import show, store
 import os
+from firebase_admin import auth
+from flask import Flask, Blueprint, request, jsonify, g
+
+from controller.face_controller import show, store
 
 face_api = Blueprint('face_api', __name__, url_prefix='/face-api')
+
+
+@face_api.before_request
+def authenticate():
+    authorization = request.headers.get('Authorization')
+
+    if not authorization or not authorization.startswith('Bearer '):
+        return jsonify({"message": "Unauthorized"}), 403
+
+    id_token = authorization.split('Bearer ')[1]
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        g.user = decoded_token
+    except Exception as e:
+        print(f"Erro ao verificar token Firebase: {e}")
+        return jsonify({"message": "Unauthorized"}), 403
 
 
 @face_api.route('/register_face', methods=['POST'])

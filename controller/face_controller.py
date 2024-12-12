@@ -58,6 +58,7 @@ def show():
         }
     })
 
+
 def store():
     person_data = request.form.get("person_data")
     if person_data is None:
