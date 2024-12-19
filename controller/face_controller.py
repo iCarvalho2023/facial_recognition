@@ -20,16 +20,24 @@ def show():
 
     face_locations = face_recognition.face_locations(image_rgb)
 
-    if len(face_locations) > 1:
-        return jsonify({"error": "More than one face detected"}), 400
-
     if len(face_locations) == 0:
-        return jsonify({"error": "No faces detected"}), 400
+        cv2.putText(image_rgb, "No face detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        return create_error_response("No faces detected", image_rgb)
+
+    if len(face_locations) > 1:
+        for (top, right, bottom, left) in face_locations:
+            cv2.rectangle(image_rgb, (left, top), (right, bottom), (0, 0, 255), 2)
+        cv2.putText(image_rgb, "Multiple faces detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        return create_error_response("More than one face detected", image_rgb)
 
     face_encoding = face_recognition.face_encodings(image_rgb, face_locations)[0]
 
     if face_encoding.shape[0] != 128:
-        return jsonify({"error": "Face encoding dimensions incorrect"}), 400
+        (top, right, bottom, left) = face_locations[0]
+        cv2.rectangle(image_rgb, (left, top), (right, bottom), (0, 0, 255), 2)
+        cv2.putText(image_rgb, "Face encoding dimensions incorrect", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                    (0, 0, 255), 2)
+        return create_error_response("Face encoding dimensions incorrect", image_rgb)
 
     known_encodings, known_names, known_person_ids = load_face()
 
@@ -57,6 +65,17 @@ def show():
             "person_id": person_id
         }
     })
+
+
+def create_error_response(error_message, image_rgb):
+    image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+    _, buffer = cv2.imencode('.jpg', image_bgr)
+    img_str = base64.b64encode(buffer).decode('utf-8')
+
+    return jsonify({
+        "error": error_message,
+        "image": img_str
+    }), 400
 
 
 def store():
