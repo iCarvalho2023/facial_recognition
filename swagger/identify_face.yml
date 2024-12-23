@@ -1,0 +1,32 @@
+tags:
+  - Faces
+parameters:
+  - name: image
+    in: formData
+    required: true
+    type: file
+    description: Imagem a ser identificada no formato binário.
+responses:
+  200:
+    description: Face identificada com sucesso.
+    schema:
+      type: object
+      properties:
+        image:
+          type: string
+          description: Imagem em Base64.
+        person:
+          type: object
+          properties:
+            person_id:
+              type: string
+              description: ID da pessoa identificada.
+            name:
+              type: string
+              description: Nome da pessoa identificada.
+  404:
+    description: Face não encontrada.
+  403:
+    description: Token inválido ou ausente.
+  400:
+    description: Erro na requisição.

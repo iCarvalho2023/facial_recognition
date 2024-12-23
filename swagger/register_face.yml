@@ -1,0 +1,29 @@
+tags:
+  - Faces
+parameters:
+  - name: person_data
+    in: formData
+    required: true
+    type: string
+    description: Dados da pessoa em formato JSON, incluindo `person_id` e `name`.
+    default: '{"person_id": "965bd494-a0de-48e2-81a4-1c8506a9323c", "name": "Teste Reconhecimento 3"}'
+  - name: images
+    in: formData
+    required: true
+    type: array
+    items:
+      type: file
+    description: Lista de imagens no formato binário associadas à pessoa.
+responses:
+  200:
+    description: Face registrada com sucesso.
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensagem de confirmação.
+  400:
+    description: Erro na requisição ou dados inválidos.
+  403:
+    description: Token inválido ou ausente.

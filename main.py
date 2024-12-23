@@ -1,7 +1,9 @@
 import os
 from firebase_admin import auth
 from flask import Flask, Blueprint, request, jsonify, g
+from flasgger import Swagger, swag_from
 
+import conn
 from controller.face_controller import show, store
 
 face_api = Blueprint('face_api', __name__, url_prefix='/face-api')
@@ -24,11 +26,13 @@ def authenticate():
 
 
 @face_api.route('/register_face', methods=['POST'])
+@swag_from('swagger/register_face.yml')
 def register_faces_function():
     return store()
 
 
 @face_api.route('/identify_face', methods=['POST'])
+@swag_from('swagger/identify_face.yml')
 def identify_faces_function():
     return show()
 
@@ -38,10 +42,56 @@ def home():
     return "Face API is running!"
 
 
-# Main Flask app
 app = Flask(__name__)
 
-# Register the Blueprint with the main app
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": 'apispec',
+            "route": '/apispec.json',
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/docs/"
+}
+
+# "host": "localhost:8080",
+
+swagger_template = {
+    "swagger": "2.0",
+    "info": {
+        "title": "Face API",
+        "description": "API para registro e identificação de faces.",
+        "version": "1.0.0"
+    },
+    "host": conn.base_url,
+    "basePath": "/face-api",
+    "schemes": [
+        "https"
+    ],
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "\
+        JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+        }
+    },
+    "security": [
+        {
+            "Bearer": []
+        }
+    ]
+}
+
+swagger = Swagger(app, config=swagger_config, template=swagger_template)
+
+# Registrar o Blueprint no app principal
 app.register_blueprint(face_api)
 
 if __name__ == "__main__":

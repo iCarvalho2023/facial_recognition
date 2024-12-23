@@ -115,7 +115,7 @@ def store():
         if response[1] != 200:
             return response
 
-    return jsonify({"message": "All faces registered successfully"}), 200
+    return jsonify({"message": "All faces registered successfully"}), 201
 
 
 def insert_face(person_id, name, encoding):
