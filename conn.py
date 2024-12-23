@@ -9,15 +9,15 @@ project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "default")
 if project_id == 'serlares-pass':
     env_file = ".env."
     firebase_adm_sdk_path = "serlares-pass-prod-firebase-sdk.json"
-    base_url = 'us-central1-serlares-pass.cloudfunctions.net/api'
+    base_url = ''
 elif project_id == 'serlares-pass-test':
     env_file = ".env.test"
     firebase_adm_sdk_path = "serlares-pass-test-firebase-sdk.json"
-    base_url = 'us-central1-serlares-pass-test.cloudfunctions.net/api'
+    base_url = ''
 else:
     env_file = ".env.dev"
     firebase_adm_sdk_path = "serlares-pass-dev-firebase-sdk.json"
-    base_url = 'us-central1-serlares-pass-dev.cloudfunctions.net/api'
+    base_url = 'face-api-51745000658.southamerica-east1.run.app'
 
 print(f"Carregando variáveis de ambiente de: {env_file}:{project_id}")
 

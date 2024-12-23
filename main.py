@@ -1,6 +1,7 @@
 import os
 from firebase_admin import auth
 from flask import Flask, Blueprint, request, jsonify, g
+from flask_cors import CORS
 from flasgger import Swagger, swag_from
 
 import conn
@@ -59,8 +60,6 @@ swagger_config = {
     "specs_route": "/docs/"
 }
 
-# "host": "localhost:8080",
-
 swagger_template = {
     "swagger": "2.0",
     "info": {
@@ -91,7 +90,7 @@ swagger_template = {
 
 swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
-# Registrar o Blueprint no app principal
+CORS(app, resources={r"/face-api/*": {"origins": "http://localhost:8080"}}, supports_credentials=True)
 app.register_blueprint(face_api)
 
 if __name__ == "__main__":
