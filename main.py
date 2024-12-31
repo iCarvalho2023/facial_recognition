@@ -12,6 +12,9 @@ face_api = Blueprint('face_api', __name__, url_prefix='/face-api')
 
 @face_api.before_request
 def authenticate():
+    if request.endpoint == 'face_api.home':
+        return
+
     authorization = request.headers.get('Authorization')
 
     if not authorization or not authorization.startswith('Bearer '):
