@@ -5,7 +5,7 @@ from flask_cors import CORS
 from flasgger import Swagger, swag_from
 
 import conn
-from controller.face_controller import show, store
+from controller.face_controller import show, store, index
 
 face_api = Blueprint('face_api', __name__, url_prefix='/face-api')
 
@@ -39,6 +39,12 @@ def register_faces_function():
 @swag_from('swagger/identify_face.yml')
 def identify_faces_function():
     return show()
+
+
+@face_api.route('/faces', methods=['GET'])
+@swag_from('swagger/get_faces.yml')
+def get_face():
+    return index()
 
 
 @face_api.route("/")

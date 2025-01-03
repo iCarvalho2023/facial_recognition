@@ -1,0 +1,32 @@
+tags:
+  - Faces
+parameters:
+  - name: personId
+    in: query
+    required: true
+    type: string
+    description: ID da pessoa para busca das faces conhecidas.
+responses:
+  200:
+    description: Lista de faces conhecidas retornada com sucesso.
+    schema:
+      type: array
+      items:
+        type: object
+        properties:
+          key:
+            type: string
+            description: Chave única da face.
+          person_id:
+            type: string
+            description: ID da pessoa associada à face.
+          name:
+            type: string
+            description: Nome da pessoa associada à face.
+          encoding:
+            type: string
+            description: Codificação da face em Base64.
+  400:
+    description: Erro na requisição, personId ausente ou inválido.
+  500:
+    description: Erro interno ao consultar o banco de dados.

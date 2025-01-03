@@ -99,7 +99,9 @@ def store():
     for img_file in images:
         image = face_recognition.load_image_file(img_file)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        _, buffer = cv2.imencode('.jpg', image_rgb)
 
+        img_str = base64.b64encode(buffer).decode('utf-8')
         encodings = face_recognition.face_encodings(image_rgb)
 
         if len(encodings) == 0:
@@ -111,14 +113,14 @@ def store():
         if face_encoding.shape[0] != 128:
             return jsonify({"error": "Invalid encoding size"}), 400
 
-        response = insert_face(person_id, name, face_encoding)
+        response = insert_face(person_id, name, img_str, face_encoding)
         if response[1] != 200:
             return response
 
     return jsonify({"message": "All faces registered successfully"}), 201
 
 
-def insert_face(person_id, name, encoding):
+def insert_face(person_id, name, img_str, encoding):
     try:
         cursor = conn.cursor()
 
@@ -129,8 +131,8 @@ def insert_face(person_id, name, encoding):
             return jsonify({"error": "Invalid encoding size"}), 400
 
         cursor.execute(
-            "INSERT INTO known_faces (key, person_id, name, encoding) VALUES (%s, %s, %s, %s)",
-            (key, person_id, name, encoding_base64)
+            "INSERT INTO known_faces (key, person_id, name, encoding, photo) VALUES (%s, %s, %s, %s, %s)",
+            (key, person_id, name, encoding_base64, img_str)
         )
         conn.commit()
         cursor.close()
@@ -138,7 +140,7 @@ def insert_face(person_id, name, encoding):
         return jsonify({"message": "Face registered successfully"}), 200
 
     except psycopg2.Error as error:
-        return jsonify({"error": "Error inserting face", "message": str(error.pgerror)}), 500
+        return jsonify({"error": "Error inserting face", "message": str(error)}), 500
 
 
 def load_face():
@@ -172,3 +174,35 @@ def load_face():
 
     cursor.close()
     return known_faces, known_names, known_person_ids
+
+
+def index():
+    person_id = request.args.get('personId')
+    if not person_id:
+        return jsonify({"error": "personId query parameter is required"}), 400
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT key, person_id, name, photo FROM known_faces WHERE person_id = %s",
+            (person_id,)
+        )
+        rows = cursor.fetchall()
+
+        known_faces = []
+        for row in rows:
+            base64_bytes = base64.b64decode(row[3])
+            encoding_base64_reencoded = base64.b64encode(base64_bytes).decode('utf-8')
+
+            known_faces.append({
+                "key": row[0],
+                "person_id": row[1],
+                "name": row[2],
+                "photo": encoding_base64_reencoded
+            })
+
+        cursor.close()
+        return jsonify(known_faces), 200
+
+    except psycopg2.Error as error:
+        return jsonify({"error": "Error retrieving faces", "message": str(error.pgerror)}), 500
