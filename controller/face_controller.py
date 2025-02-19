@@ -96,4 +96,4 @@ def index():
         return jsonify({"error": "personId query parameter is required"}), 400
 
     faces = face_repo.get_faces_by_person_id(person_id)
-    return jsonify(faces), 200 if faces else (jsonify({"error": "No faces found"}), 404)
+    return (jsonify(faces), 200) if faces else (jsonify({"error": "No faces found"}), 404)
