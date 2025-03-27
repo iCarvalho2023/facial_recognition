@@ -49,22 +49,23 @@ def show():
 def store():
     person_data = request.form.get("person_data")
     if not person_data:
-        return jsonify({"error": "person_data is required"}), 400
+        return jsonify({"erro": "O campo 'person_data' é obrigatório"}), 400
 
     try:
         person_data = json.loads(person_data)
         person_id, name = person_data.get("person_id"), person_data.get("name")
         if not person_id or not name:
-            return jsonify({"error": "Both person_id and name are required"}), 400
+            return jsonify({"erro": "Os campos 'person_id' e 'name' são obrigatórios"}), 400
     except json.JSONDecodeError:
-        return jsonify({"error": "Invalid JSON format"}), 400
+        return jsonify({"erro": "Formato JSON inválido"}), 400
 
     images = request.files.getlist("images")
     if not images:
-        return jsonify({"error": "No images provided"}), 400
+        return jsonify({"erro": "Nenhuma imagem foi enviada"}), 400
 
     known_encodings = face_repo.get_encodings_by_person_id(person_id)
     first_encoding = None
+    threshold = 0.6
 
     for img_file in images:
         image = face_recognition.load_image_file(img_file)
@@ -72,22 +73,26 @@ def store():
         encodings = face_recognition.face_encodings(image_rgb)
 
         if len(encodings) != 1:
-            return jsonify({"error": "Each image must contain exactly one face"}), 400
+            return jsonify({"erro": "Cada imagem deve conter exatamente um rosto"}), 400
 
         face_encoding = encodings[0]
         if first_encoding is None:
             first_encoding = face_encoding
-        elif not face_recognition.compare_faces([first_encoding], face_encoding)[0]:
-            return jsonify({"error": "All images must be of the same person"}), 400
+        else:
+            distance = face_recognition.face_distance([first_encoding], face_encoding)[0]
+            if distance > threshold:
+                return jsonify({"erro": "Todas as imagens devem ser da mesma pessoa"}), 400
 
-        if any(face_recognition.compare_faces(known_encodings, face_encoding)):
-            return jsonify({"error": "Person does not match previously registered photos"}), 400
+        if known_encodings:
+            distances = face_recognition.face_distance(known_encodings, face_encoding)
+            if any(d <= threshold for d in distances):
+                return jsonify({"erro": "A pessoa não corresponde às fotos já cadastradas"}), 400
 
         img_str = encode_image(image_rgb)
         if not face_repo.insert_face(person_id, name, img_str, face_encoding):
-            return jsonify({"error": "Database insertion failed"}), 500
+            return jsonify({"erro": "Falha ao inserir no banco de dados"}), 500
 
-    return jsonify({"message": "All faces registered successfully"}), 201
+    return jsonify({"mensagem": "Todos os rostos foram cadastrados com sucesso"}), 201
 
 
 def index():
