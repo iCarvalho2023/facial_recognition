@@ -4,7 +4,7 @@ import json
 import numpy as np
 import face_recognition
 from repository.face_repository import FaceRepository
-from utils.utils import encode_image, create_error_response, draw_face
+from utils.utils import encode_image, create_error_response, draw_face, detect_fake_face
 
 face_repo = FaceRepository()
 
@@ -16,6 +16,12 @@ def show():
     file = request.files['image']
     image = face_recognition.load_image_file(file)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    if not detect_fake_face(image_rgb):
+        return jsonify({
+            "error": "Possível fraude detectada! Use uma foto real!",
+            "image": encode_image(image_rgb)
+        }), 400
 
     face_locations = face_recognition.face_locations(image_rgb)
     if len(face_locations) != 1:
@@ -63,7 +69,6 @@ def store():
     if not images:
         return jsonify({"erro": "Nenhuma imagem foi enviada"}), 400
 
-    known_encodings = face_repo.get_encodings_by_person_id(person_id)
     first_encoding = None
     threshold = 0.6
 
@@ -83,10 +88,15 @@ def store():
             if distance > threshold:
                 return jsonify({"erro": "Todas as imagens devem ser da mesma pessoa"}), 400
 
+        known_encodings, known_names, known_person_ids = face_repo.get_all_faces(person_id)
         if known_encodings:
-            distances = face_recognition.face_distance(known_encodings, face_encoding)
-            if any(d <= threshold for d in distances):
-                return jsonify({"erro": "A pessoa não corresponde às fotos já cadastradas"}), 400
+            face_distances = face_recognition.face_distance(known_encodings, face_encoding)
+            best_match_index = np.argmin(face_distances)
+
+            if face_distances[best_match_index] <= threshold:
+                matched_person_id = known_person_ids[best_match_index]
+                if matched_person_id != person_id:
+                    return jsonify({"erro": "A pessoa não corresponde às fotos já cadastradas"}), 400
 
         img_str = encode_image(image_rgb)
         if not face_repo.insert_face(person_id, name, img_str, face_encoding):
