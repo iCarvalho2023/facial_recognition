@@ -1,65 +1,130 @@
-# Variáveis
-PROJECT_ID_DEV = serlares-pass-dev
-PROJECT_ID_TEST = serlares-pass-test
-PROJECT_ID_PROD = serlares-pass
-REGION = southamerica-east1
-IMAGE_NAME = face-api
-DOCKERFILE = Dockerfile
-SOURCE_DIR = .
+# Variáveis essenciais
+PROJECT_ID_DEV := serlares-pass-dev
+PROJECT_ID_TEST := serlares-pass-test
+PROJECT_ID_PROD := serlares-pass
+REGION := southamerica-east1
+IMAGE_NAME := face-api
+DOCKERFILE := Dockerfile
+SOURCE_DIR := .
 
-# 1. Construir a imagem Docker
+# Configuração do Artifact Registry
+REPOSITORY_NAME := docker-repo
+AR_HOSTNAME := $(REGION)-docker.pkg.dev
+FULL_IMAGE_PATH := $(AR_HOSTNAME)/$(PROJECT_ID)/$(REPOSITORY_NAME)/$(IMAGE_NAME)
+
+# Configurações do Cloud Run
+SERVICE_ACCOUNT := cloud-run-sa@$(PROJECT_ID).iam.gserviceaccount.com
+MEMORY := 2Gi
+CPU := 1
+TIMEOUT := 300s
+MAX_INSTANCES := 5
+CONCURRENCY := 80
+
+# 1. Configuração inicial do ambiente
+setup-ar:
+	@echo "Configurando Artifact Registry..."
+	gcloud services enable artifactregistry.googleapis.com --project=$(PROJECT_ID)
+	gcloud artifacts repositories create $(REPOSITORY_NAME) \
+		--repository-format=docker \
+		--location=$(REGION) \
+		--description="Repositório Docker para $(IMAGE_NAME)" \
+		--project=$(PROJECT_ID)
+	gcloud auth configure-docker $(AR_HOSTNAME)
+
+# 2. Autenticação Docker
+auth:
+	@echo "Autenticando no Artifact Registry..."
+	gcloud auth configure-docker $(AR_HOSTNAME)
+
+# 3. Construção da imagem Docker
 build:
-	docker build -t gcr.io/$(PROJECT_ID)/$(IMAGE_NAME) -f $(DOCKERFILE) $(SOURCE_DIR)
+	@echo "️Construindo imagem Docker..."
+	docker build \
+		-t $(FULL_IMAGE_PATH) \
+		-f $(DOCKERFILE) \
+		$(SOURCE_DIR)
 
-# 2. Fazer o push da imagem para o Google Container Registry
+# 4. Push para o Artifact Registry
 push:
-	docker push gcr.io/$(PROJECT_ID)/$(IMAGE_NAME)
+	@echo "Enviando imagem para o Artifact Registry..."
+	docker push $(FULL_IMAGE_PATH)
 
-# 3. Implantar a imagem no Google Cloud Run
+# 5. Deploy no Cloud Run
 deploy:
+	@echo "Realizando deploy no Cloud Run..."
 	gcloud run deploy $(IMAGE_NAME) \
-		--image gcr.io/$(PROJECT_ID)/$(IMAGE_NAME) \
+		--image $(FULL_IMAGE_PATH) \
 		--platform managed \
 		--region $(REGION) \
+		--service-account $(SERVICE_ACCOUNT) \
+		--memory $(MEMORY) \
+		--cpu $(CPU) \
+		--timeout $(TIMEOUT) \
+		--max-instances $(MAX_INSTANCES) \
+		--concurrency $(CONCURRENCY) \
 		--allow-unauthenticated \
-		--timeout 300s \
-		--memory 2Gi
+		--project=$(PROJECT_ID)
 
+# 6. Deploys específicos por ambiente
 deploy_dev:
-	gcloud config set project $(PROJECT_ID_DEV)
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_DEV) build
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_DEV) push
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_DEV) deploy
+	@echo "Iniciando deploy no ambiente DEV..."
+	$(MAKE) PROJECT_ID=$(PROJECT_ID_DEV) auth build push deploy
 
 deploy_test:
-	gcloud config set project $(PROJECT_ID_TEST)
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_TEST) build
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_TEST) push
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_TEST) deploy
+	@echo "Iniciando deploy no ambiente TEST..."
+	$(MAKE) PROJECT_ID=$(PROJECT_ID_TEST) auth build push deploy
 
 deploy_prod:
-	gcloud config set project $(PROJECT_ID_PROD)
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_PROD) build
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_PROD) push
-	$(MAKE) PROJECT_ID=$(PROJECT_ID_PROD) deploy
+	@echo "Iniciando deploy no ambiente PROD..."
+	$(MAKE) PROJECT_ID=$(PROJECT_ID_PROD) auth build push deploy
 
-# 4. Exibir os logs do serviço no Google Cloud Run
+# 7. Visualização de logs
 logs:
-	gcloud run services logs read $(IMAGE_NAME) --region $(REGION)
+	@echo "📜 Exibindo logs do serviço..."
+	gcloud run services logs read $(IMAGE_NAME) \
+		--region $(REGION) \
+		--project=$(PROJECT_ID)
 
-# 5. Limpar as imagens locais do Docker
+# 8. Limpeza de recursos
 clean:
-	docker rmi gcr.io/$(PROJECT_ID)/$(IMAGE_NAME)
+	@echo "🧹 Removendo imagem local..."
+	docker rmi $(FULL_IMAGE_PATH) || true
 
-# 6. Help
+purge:
+	@echo "Removendo todos os recursos..."
+	gcloud run services delete $(IMAGE_NAME) \
+		--region $(REGION) \
+		--platform managed \
+		--quiet \
+		--project=$(PROJECT_ID)
+	gcloud artifacts repositories delete $(REPOSITORY_NAME) \
+		--location=$(REGION) \
+		--quiet \
+		--project=$(PROJECT_ID)
+
+# 9. Ajuda
 help:
-	@echo "Makefile para gerenciamento do deploy no Google Cloud Run"
-	@echo "Comandos:"
-	@echo "  make build        - Constrói a imagem Docker"
-	@echo "  make push         - Faz o push da imagem para o GCR"
-	@echo "  make deploy_dev   - Realiza o deploy no ambiente de desenvolvimento"
-	@echo "  make deploy_test  - Realiza o deploy no ambiente de teste"
-	@echo "  make deploy_prod  - Realiza o deploy no ambiente de produção"
-	@echo "  make logs         - Exibe os logs do serviço no Cloud Run"
-	@echo "  make clean        - Remove a imagem local do Docker"
-	@echo "  make help         - Exibe este texto de ajuda"
+	@echo "Makefile para Gerenciamento de Deploy no Google Cloud"
+	@echo ""
+	@echo "Configuração:"
+	@echo "  make setup-ar      Configura o Artifact Registry (executar primeiro)"
+	@echo ""
+	@echo "Comandos Básicos:"
+	@echo "  make build         Constrói a imagem Docker"
+	@echo "  make push          Envia a imagem para o Artifact Registry"
+	@echo "  make deploy        Realiza o deploy no Cloud Run"
+	@echo ""
+	@echo "Deploys por Ambiente:"
+	@echo "  make deploy_dev    Deploy no ambiente de Desenvolvimento"
+	@echo "  make deploy_test   Deploy no ambiente de Teste"
+	@echo "  make deploy_prod   Deploy no ambiente de Produção"
+	@echo ""
+	@echo "Monitoramento:"
+	@echo "  make logs          Exibe os logs do serviço"
+	@echo ""
+	@echo "Limpeza:"
+	@echo "  make clean         Remove a imagem Docker local"
+	@echo "  make purge         Remove TODOS os recursos (cuidado!)"
+	@echo ""
+	@echo "Ajuda:"
+	@echo "  make help          Exibe esta mensagem"
