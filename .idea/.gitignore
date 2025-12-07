@@ -2,7 +2,7 @@
 /shelf/
 /workspace.xml
 ../.idea/
-../config/
+../config/*
 /inspectionProfiles/profiles_settings.xml
 /facial_recognition.iml
 /misc.xml
