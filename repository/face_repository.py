@@ -4,6 +4,7 @@ import numpy as np
 import psycopg2
 
 from conn import db as conn
+from utils.utils import normalize_photo
 
 
 class FaceRepository:
@@ -57,23 +58,31 @@ class FaceRepository:
             return False
 
     def get_faces_by_person_id(self, person_id):
-        """Fetch stored faces for a person."""
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT key, person_id, name, photo FROM known_faces WHERE person_id = %s",
+            """
+            SELECT
+                key,
+                person_id,
+                name,
+                photo
+            FROM known_faces
+            WHERE person_id = %s
+            """,
             (person_id,)
         )
         rows = cursor.fetchall()
         cursor.close()
 
-        return [
-            {
+        faces = []
+        for row in rows:
+            faces.append({
                 "key": row[0],
                 "person_id": row[1],
                 "name": row[2],
-                "photo": row[3]
-            } for row in rows
-        ]
+                "photo": normalize_photo(row[3]),
+            })
+        return faces
 
     def get_encodings_by_person_id(self, person_id):
         """Fetch face encodings for a specific person."""

@@ -6,12 +6,7 @@ from firebase_admin import credentials
 
 project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "default")
 
-if project_id == 'serlares-pass':
-    env_file = ".env."
-elif project_id == 'serlares-pass-test':
-    env_file = ".env.test"
-else:
-    env_file = ".env.dev"
+env_file = ".env"
 
 load_dotenv(f"config/{env_file}")
 

@@ -1,12 +1,12 @@
-import base64
-
-import cv2
 from flask import jsonify
 import cv2
 import numpy as np
 import mediapipe as mp
+import base64
+import re
 
 mp_selfie_segmentation = mp.solutions.selfie_segmentation
+BASE64_RE = re.compile(r'^[A-Za-z0-9+/=\r\n]+$')
 
 
 def create_error_response(error_message, image_rgb):
@@ -32,15 +32,12 @@ def detect_fake_face(image):
         results = segment.process(image_rgb)
         mask = results.segmentation_mask
 
-        # Cria uma máscara binária: 1 = pessoa, 0 = fundo
         binary_mask = mask > 0.5
 
-        # Conta pixels da pessoa e do fundo
         total_pixels = binary_mask.size
         person_pixels = np.sum(binary_mask)
         background_pixels = total_pixels - person_pixels
 
-        # Calcula proporção do fundo
         background_ratio = background_pixels / total_pixels
 
         if background_ratio < 0.1:
@@ -48,3 +45,27 @@ def detect_fake_face(image):
         else:
             return True
 
+
+def normalize_photo(photo_mv):
+    if photo_mv is None:
+        return None
+
+    raw = bytes(photo_mv)
+
+    try:
+        txt = raw.decode("utf-8").strip()
+    except UnicodeDecodeError:
+        txt = None
+
+    if txt:
+        if txt.startswith("data:"):
+            try:
+                header, b64data = txt.split(",", 1)
+                return b64data.strip()
+            except ValueError:
+                pass
+
+        if BASE64_RE.match(txt) and len(txt.replace("\n", "")) % 4 == 0:
+            return txt.replace("\n", "")
+
+    return base64.b64encode(raw).decode("ascii")
