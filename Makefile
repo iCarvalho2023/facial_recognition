@@ -51,7 +51,7 @@ push:
 
 # 5. Deploy no Cloud Run
 deploy:
-	@echo "Realizando deploy no Cloud Run..."
+	@echo "Realizando deploy no Cloud Run... $(PROJECT_ID)"
 	gcloud run deploy $(IMAGE_NAME) \
 		--image $(FULL_IMAGE_PATH) \
 		--platform managed \
